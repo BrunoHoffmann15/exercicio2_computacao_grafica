@@ -85,6 +85,8 @@ struct Mesh
 
 void rotateMesh(Mesh &mesh, bool clockwise);
 
+void scaleMesh(Mesh &mesh, bool up);
+
 
 // Função MAIN
 int main()
@@ -247,10 +249,21 @@ int main()
         }
 
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			rotateMesh(meshes[1], false);
+			if (rotate) {
+				rotateMesh(meshes[1], true);
+			}
+			if (scale) {
+				scaleMesh(meshes[1], true);
+			}
 		}
+
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			rotateMesh(meshes[1], true);
+			if (rotate) {
+				rotateMesh(meshes[1], false);
+			}
+			if (scale) {
+				scaleMesh(meshes[1], false);
+			}
 		}
         
         glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -303,10 +316,22 @@ void rotateMesh(Mesh &mesh, bool clockwise)
 
 	if (axisX)
 		mesh.rotation.x += delta;
-	else if (axisY)
+	if (axisY)
 		mesh.rotation.y += delta;
-	else if (axisZ)
+	if (axisZ)
 		mesh.rotation.z += delta;
+}
+
+void scaleMesh(Mesh &mesh, bool up)
+{
+	float delta = up ? 0.01f : -0.01f;
+
+	if (axisX)
+		mesh.scale.x += delta;
+	if (axisY)
+		mesh.scale.y += delta;
+	if (axisZ)
+		mesh.scale.z += delta;
 }
 
 // Função de callback de teclado - só pode ter uma instância (deve ser estática se
@@ -347,6 +372,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	{
 		axisX = false;
 		axisY = false;
+		axisZ = true;
+	}
+
+	if (key == GLFW_KEY_C && action == GLFW_PRESS)
+	{
+		axisX = true;
+		axisY = true;
 		axisZ = true;
 	}
 }
