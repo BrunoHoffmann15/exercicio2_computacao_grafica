@@ -66,7 +66,7 @@ void main()
 }
 )glsl";
 
-bool axisX=false, axisY=false, axisZ=false, rotate = false, scale = false;
+bool axisX=false, axisY=false, axisZ=false, rotate = false, scale = false, translade = false;
 bool perspective = true; //começa com projeção perspectiva
 
 //Instanciação da Camera
@@ -86,6 +86,8 @@ struct Mesh
 void rotateMesh(Mesh &mesh, bool clockwise);
 
 void scaleMesh(Mesh &mesh, bool up);
+
+void transladeMesh(Mesh &mesh, bool up);
 
 
 // Função MAIN
@@ -164,7 +166,7 @@ int main()
 	m1.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m1.nVertices);
 	m1.position = glm::vec3(0.0, 0.0, 0.0);
 	m1.rotation = glm::vec3(0.0, 0.0, 0.0);
-	m1.scale = glm::vec3(1.0, 1.0, 1.0);
+	m1.scale = glm::vec3(0.5, 0.5, 0.5);
 
 	meshes.push_back(m1);
 
@@ -212,10 +214,10 @@ int main()
             glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
          }
 
-		 if(glfwGetKey(window,GLFW_KEY_W) == GLFW_PRESS) camera.processKeyboard("FORWARD",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_S) == GLFW_PRESS) camera.processKeyboard("BACKWARD",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS) camera.processKeyboard("LEFT",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS) camera.processKeyboard("RIGHT",deltaTime);
+		 if(glfwGetKey(window,GLFW_KEY_I) == GLFW_PRESS) camera.processKeyboard("FORWARD",deltaTime);
+		 if(glfwGetKey(window,GLFW_KEY_K) == GLFW_PRESS) camera.processKeyboard("BACKWARD",deltaTime);
+		 if(glfwGetKey(window,GLFW_KEY_J) == GLFW_PRESS) camera.processKeyboard("LEFT",deltaTime);
+		 if(glfwGetKey(window,GLFW_KEY_L) == GLFW_PRESS) camera.processKeyboard("RIGHT",deltaTime);
         
         if (glfwGetKey(window, GLFW_KEY_1)==GLFW_PRESS)
         {
@@ -252,8 +254,10 @@ int main()
 			if (rotate) {
 				rotateMesh(meshes[1], true);
 			}
-			if (scale) {
+			else if (scale) {
 				scaleMesh(meshes[1], true);
+			} else {
+				transladeMesh(meshes[1], true);
 			}
 		}
 
@@ -261,8 +265,10 @@ int main()
 			if (rotate) {
 				rotateMesh(meshes[1], false);
 			}
-			if (scale) {
+			else if (scale) {
 				scaleMesh(meshes[1], false);
+			} else {
+				transladeMesh(meshes[1], false);
 			}
 		}
         
@@ -309,6 +315,18 @@ int main()
 	return 0;
 }
 
+void transladeMesh(Mesh &mesh, bool up)
+{
+	float delta = 0.01f * (up ? 1 : -1);
+
+	if (axisX)
+		mesh.position.x += delta;
+	if (axisY)
+		mesh.position.y += delta;
+	if (axisZ)
+		mesh.position.z += delta;
+}
+
 // Rotaciona o mesh em torno do eixo selecionado (X, Y ou Z) e no sentido horário ou anti-horário
 void rotateMesh(Mesh &mesh, bool clockwise)
 {
@@ -342,16 +360,25 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	if (key == GLFW_KEY_E && action == GLFW_PRESS)
+	if (key == GLFW_KEY_S && action == GLFW_PRESS)
 	{
 		scale = true;
 		rotate = false;
+		translade = false;
 	}
 
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		scale = false;
 		rotate = true;
+		translade = false;
+	}
+
+	if (key == GLFW_KEY_T && action == GLFW_PRESS)
+	{
+		scale = false;
+		rotate = false;
+		translade = true;
 	}
 
 	if (key == GLFW_KEY_X && action == GLFW_PRESS)
