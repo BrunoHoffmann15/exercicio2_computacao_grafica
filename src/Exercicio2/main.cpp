@@ -76,9 +76,11 @@ float lastFrame = 0.0;
 
 struct Mesh 
 {
-    GLuint VAO; 
+    GLuint VAO;
+	glm::vec3 position;
+	glm::vec3 rotation;
+	glm::vec3 scale; 
 	int nVertices;
-
 };
 
 // Função MAIN
@@ -129,10 +131,6 @@ int main()
 	// Compilando e buildando o programa de shader
 	GLuint shaderID = setupShader();
 
-	// Gerando um buffer simples, com a geometria de um triângulo
-	GLuint VAO = setupGeometry();
-
-
 	glUseProgram(shaderID);
 
     // Matriz de modelo - Transformações nos objetos
@@ -154,11 +152,25 @@ int main()
     
     glEnable(GL_DEPTH_TEST);
 
-	Mesh m;
+	std::vector<Mesh> meshes;
 
+	Mesh m1;
 
-	m.VAO = loadSimpleOBJ("../assets/Modelos3D/SuzanneSubdiv1.obj",m.nVertices);
-    
+	m1.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m1.nVertices);
+	m1.position = glm::vec3(0.0, 0.0, 0.0);
+	m1.rotation = glm::vec3(0.0, 0.0, 0.0);
+	m1.scale = glm::vec3(1.0, 1.0, 1.0);
+
+	meshes.push_back(m1);
+
+	Mesh m2;
+
+	m2.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m2.nVertices);
+	m2.position = glm::vec3(1.0, 0.0, 0.0);
+	m2.rotation = glm::vec3(0.0, 0.0, 0.0);
+	m2.scale = glm::vec3(0.5, 0.5, 0.5);
+
+	meshes.push_back(m2);
 
 	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
@@ -261,19 +273,35 @@ int main()
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
 		// Chamada de Desenho - DRAWCALL
-		// Poligono Preenchido - GL_TRIANGLES
-		//glBindVertexArray(VAO);
-		//glDrawArrays(GL_TRIANGLES, 0, 18);
-		glBindVertexArray(m.VAO);
-		glDrawArrays(GL_TRIANGLES, 0, m.nVertices);
-		
-		glBindVertexArray(0);
+		for (auto& mesh : meshes) 
+		{
+			glm::mat4 modelMesh = glm::mat4(1);
+			
+			// Aplicar transformações do mesh
+			modelMesh = glm::translate(modelMesh, mesh.position);
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+			modelMesh = glm::scale(modelMesh, mesh.scale);
+			
+			glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, glm::value_ptr(modelMesh));
+			
+			glBindVertexArray(mesh.VAO);
+			glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
+			glBindVertexArray(0);
+		}
 
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
 	}
-	// Pede pra OpenGL desalocar os buffers
-	glDeleteVertexArrays(1, &VAO);
+
+
+	// Desaloca o VAO do buffer.
+	for (auto& mesh : meshes) 
+	{
+		glDeleteVertexArrays(1, &mesh.VAO);
+	}
+
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
