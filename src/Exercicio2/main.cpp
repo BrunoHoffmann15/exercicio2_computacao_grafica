@@ -66,7 +66,7 @@ void main()
 }
 )glsl";
 
-bool rotateX=false, rotateY=false, rotateZ=false;
+bool axisX=false, axisY=false, axisZ=false, rotate = false, scale = false;
 bool perspective = true; //começa com projeção perspectiva
 
 //Instanciação da Camera
@@ -82,6 +82,9 @@ struct Mesh
 	glm::vec3 scale; 
 	int nVertices;
 };
+
+void rotateMesh(Mesh &mesh, bool clockwise);
+
 
 // Função MAIN
 int main()
@@ -242,29 +245,15 @@ int main()
             //Visualização debaixo
             view = glm::lookAt(glm::vec3(0,-3,0), glm::vec3(0,0,0), glm::vec3(0,0,1));
         }
+
+		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+			rotateMesh(meshes[1], false);
+		}
+		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+			rotateMesh(meshes[1], true);
+		}
         
         glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    
-        // ----------
-
-		float angle = (GLfloat)glfwGetTime();
-		model = glm::mat4(1); 
-		if (rotateX)
-		{
-			model = glm::rotate(model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-			
-		}
-		else if (rotateY)
-		{
-			model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-
-		}
-		else if (rotateZ)
-		{
-			model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-
-		}
-
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, glm::value_ptr(model));
 		
 		// Atualização da matriz de view de acordo com as mudanças que ela sofreu via input
@@ -307,6 +296,19 @@ int main()
 	return 0;
 }
 
+// Rotaciona o mesh em torno do eixo selecionado (X, Y ou Z) e no sentido horário ou anti-horário
+void rotateMesh(Mesh &mesh, bool clockwise)
+{
+    float delta = clockwise ? -1.0f : 1.0f;
+
+	if (axisX)
+		mesh.rotation.x += delta;
+	else if (axisY)
+		mesh.rotation.y += delta;
+	else if (axisZ)
+		mesh.rotation.z += delta;
+}
+
 // Função de callback de teclado - só pode ter uma instância (deve ser estática se
 // estiver dentro de uma classe) - É chamada sempre que uma tecla for pressionada
 // ou solta via GLFW
@@ -315,34 +317,38 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
+	if (key == GLFW_KEY_E && action == GLFW_PRESS)
+	{
+		scale = true;
+		rotate = false;
+	}
+
+	if (key == GLFW_KEY_R && action == GLFW_PRESS)
+	{
+		scale = false;
+		rotate = true;
+	}
+
 	if (key == GLFW_KEY_X && action == GLFW_PRESS)
 	{
-		rotateX = true;
-		rotateY = false;
-		rotateZ = false;
+		axisX = true;
+		axisY = false;
+		axisZ = false;
 	}
 
 	if (key == GLFW_KEY_Y && action == GLFW_PRESS)
 	{
-		rotateX = false;
-		rotateY = true;
-		rotateZ = false;
+		axisX = false;
+		axisY = true;
+		axisZ = false;
 	}
 
 	if (key == GLFW_KEY_Z && action == GLFW_PRESS)
 	{
-		rotateX = false;
-		rotateY = false;
-		rotateZ = true;
+		axisX = false;
+		axisY = false;
+		axisZ = true;
 	}
-
-    if (key == GLFW_KEY_P && action == GLFW_PRESS)
-         {
-            perspective = !perspective;
-         }
-
-
-
 }
 
 //Esta função está basntante hardcoded - objetivo é compilar e "buildar" um programa de
