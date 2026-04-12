@@ -6,3 +6,5 @@ Aluno: Bruno da Siqueira Hoffmann
 ## Como executar
 
 ## Comandos
+
+## Estrutura do Projeto
