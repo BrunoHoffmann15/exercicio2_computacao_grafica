@@ -8,7 +8,6 @@
 
 #include <iostream>
 #include <string>
-#include <assert.h>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -34,8 +33,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 // Protótipos das funções
 int setupShader();
-int setupGeometry();
-int loadSimpleOBJ(string filePATH, int &nVertices);
+int setupWireframeShader();
+int loadSimpleOBJ(string filePATH, int &nVertices, int r, int g, int b);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 600, HEIGHT = 600;
@@ -66,8 +65,32 @@ void main()
 }
 )glsl";
 
-bool axisX=false, axisY=false, axisZ=false, rotate = false, scale = false, translade = false;
+// Wireframe Vertex Shader
+const GLchar* wireframeVertexShaderSource = R"glsl(#version 450
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
+uniform mat4 model;
+uniform mat4 projection;
+uniform mat4 view;
+void main()
+{
+gl_Position = projection * view * model * vec4(position, 1.0);
+}
+)glsl";
+
+// Wireframe Fragment Shader (black lines)
+const GLchar* wireframeFragmentShaderSource = R"glsl(#version 450
+out vec4 color;
+
+void main()
+{
+    color = vec4(0.0, 0.0, 0.0, 1.0);
+}
+)glsl";
+
+bool axisX=false, axisY=false, axisZ=false, rotateEnabled = false, scale = false, translade = false;
 bool perspective = true; //começa com projeção perspectiva
+int active_mesh = -1; //mesh selecionado para transformação (0 ou 1)
 
 //Instanciação da Camera
 Camera camera(glm::vec3(0.0, 0.0, -3.0), glm::vec3(0.0,1.0,0.0),90.0,0.0);
@@ -137,12 +160,13 @@ int main()
 
 	// Compilando e buildando o programa de shader
 	GLuint shaderID = setupShader();
+	GLuint wireframeShaderID = setupWireframeShader();
 
 	glUseProgram(shaderID);
 
     // Matriz de modelo - Transformações nos objetos
 	glm::mat4 model = glm::mat4(1); //matriz identidade;
-	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+  	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, glm::value_ptr(model));
     //-----------------
     // Matriz de projeção
@@ -163,7 +187,7 @@ int main()
 
 	Mesh m1;
 
-	m1.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m1.nVertices);
+	m1.VAO = loadSimpleOBJ("../../assets/Suzanne.obj",m1.nVertices, 1, 0, 1);
 	m1.position = glm::vec3(0.0, 0.0, 0.0);
 	m1.rotation = glm::vec3(0.0, 0.0, 0.0);
 	m1.scale = glm::vec3(0.5, 0.5, 0.5);
@@ -172,7 +196,7 @@ int main()
 
 	Mesh m2;
 
-	m2.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m2.nVertices);
+	m2.VAO = loadSimpleOBJ("../../assets/Suzanne.obj",m2.nVertices, 0, 1, 1);
 	m2.position = glm::vec3(1.0, 0.0, 0.0);
 	m2.rotation = glm::vec3(0.0, 0.0, 0.0);
 	m2.scale = glm::vec3(0.5, 0.5, 0.5);
@@ -251,24 +275,24 @@ int main()
         }
 
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			if (rotate) {
-				rotateMesh(meshes[1], true);
+			if (rotateEnabled) {
+				rotateMesh(meshes[active_mesh], true);
 			}
 			else if (scale) {
-				scaleMesh(meshes[1], true);
+				scaleMesh(meshes[active_mesh], true);
 			} else {
-				transladeMesh(meshes[1], true);
+				transladeMesh(meshes[active_mesh], true);
 			}
 		}
 
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			if (rotate) {
-				rotateMesh(meshes[1], false);
+			if (rotateEnabled) {
+				rotateMesh(meshes[active_mesh], false);
 			}
 			else if (scale) {
-				scaleMesh(meshes[1], false);
+				scaleMesh(meshes[active_mesh], false);
 			} else {
-				transladeMesh(meshes[1], false);
+				transladeMesh(meshes[active_mesh], false);
 			}
 		}
         
@@ -281,6 +305,8 @@ int main()
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
 		// Chamada de Desenho - DRAWCALL
+		// Primeiro: renderizar solid
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		for (auto& mesh : meshes) 
 		{
 			glm::mat4 modelMesh = glm::mat4(1);
@@ -298,6 +324,32 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
 			glBindVertexArray(0);
 		}
+		
+		// Segundo: renderizar wireframe por cima
+		glUseProgram(wireframeShaderID);
+		glUniformMatrix4fv(glGetUniformLocation(wireframeShaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(wireframeShaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glLineWidth(1.5f);
+		for (auto& mesh : meshes) 
+		{
+			glm::mat4 modelMesh = glm::mat4(1);
+			
+			// Aplicar transformações do mesh
+			modelMesh = glm::translate(modelMesh, mesh.position);
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+			modelMesh = glm::scale(modelMesh, mesh.scale);
+			
+			glUniformMatrix4fv(glGetUniformLocation(wireframeShaderID, "model"), 1, GL_FALSE, glm::value_ptr(modelMesh));
+			
+			glBindVertexArray(mesh.VAO);
+			glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
+			glBindVertexArray(0);
+		}
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glUseProgram(shaderID);
 
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
@@ -363,21 +415,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_S && action == GLFW_PRESS)
 	{
 		scale = true;
-		rotate = false;
+		rotateEnabled = false;
 		translade = false;
 	}
 
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		scale = false;
-		rotate = true;
+		rotateEnabled = true;
 		translade = false;
 	}
 
 	if (key == GLFW_KEY_T && action == GLFW_PRESS)
 	{
 		scale = false;
-		rotate = false;
+		rotateEnabled = false;
 		translade = true;
 	}
 
@@ -407,6 +459,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		axisX = true;
 		axisY = true;
 		axisZ = true;
+	}
+  if ((key == GLFW_KEY_1 || key == GLFW_KEY_KP_1) && action == GLFW_PRESS)
+  {
+      active_mesh = 0;
+      scale = false;
+      rotateEnabled = false;
+      translade = false;
+  }
+  if ((key == GLFW_KEY_2 || key == GLFW_KEY_KP_2) && action == GLFW_PRESS)
+  {
+      active_mesh = 1;
+      scale = false;
+      rotateEnabled = false;
+      translade = false;
 	}
 }
 
@@ -458,103 +524,60 @@ int setupShader()
 	return shaderProgram;
 }
 
+int setupWireframeShader()
+{
+	// Vertex shader
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &wireframeVertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+	// Checando erros de compilação (exibição via log no terminal)
+	GLint success;
+	GLchar infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::WIREFRAME_VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// Fragment shader
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &wireframeFragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+	// Checando erros de compilação (exibição via log no terminal)
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::WIREFRAME_FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+	// Linkando os shaders e criando o identificador do programa de shader
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+	// Checando por erros de linkagem
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::WIREFRAME_PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	return shaderProgram;
+}
+
 // Esta função está bastante harcoded - objetivo é criar os buffers que armazenam a 
 // geometria de um triângulo
 // Apenas atributo coordenada nos vértices
 // 1 VBO com as coordenadas, VAO com apenas 1 ponteiro para atributo
 // A função retorna o identificador do VAO
-int setupGeometry()
-{
-	// Aqui setamos as coordenadas x, y e z do triângulo e as armazenamos de forma
-	// sequencial, já visando mandar para o VBO (Vertex Buffer Objects)
-	// Cada atributo do vértice (coordenada, cores, coordenadas de textura, normal, etc)
-	// Pode ser arazenado em um VBO único ou em VBOs separados
-	GLfloat vertices[] = {
-
-        // Base da pirâmide: 2 triângulos (multicor)
-        // x     y     z      r    g    b
-        -0.5, -0.5, -0.5,   1.0, 1.0, 0.0,
-        -0.5, -0.5,  0.5,   0.0, 1.0, 1.0,
-         0.5, -0.5, -0.5,   1.0, 0.0, 1.0,
-
-        -0.5, -0.5,  0.5,   1.0, 1.0, 0.0,
-         0.5, -0.5,  0.5,   0.0, 1.0, 1.0,
-         0.5, -0.5, -0.5,   1.0, 0.0, 1.0,
-
-        // Frente (z = -0.5) -> Amarelo
-        -0.5, -0.5, -0.5,   1.0, 1.0, 0.0,
-         0.0,  0.5,  0.0,   1.0, 1.0, 0.0,
-         0.5, -0.5, -0.5,   1.0, 1.0, 0.0,
-
-        // Esquerda (x = -0.5) -> Ciano
-        -0.5, -0.5, -0.5,   0.0, 1.0, 1.0,
-         0.0,  0.5,  0.0,   0.0, 1.0, 1.0,
-        -0.5, -0.5,  0.5,   0.0, 1.0, 1.0,
-
-        // Trás (z = 0.5) -> Verde
-        -0.5, -0.5,  0.5,   0.0, 1.0, 0.0,
-         0.0,  0.5,  0.0,   0.0, 1.0, 0.0,
-         0.5, -0.5,  0.5,   0.0, 1.0, 0.0,
-
-        // Direita (x = 0.5) -> Magenta
-         0.5, -0.5,  0.5,   1.0, 0.0, 1.0,
-         0.0,  0.5,  0.0,   1.0, 0.0, 1.0,
-         0.5, -0.5, -0.5,   1.0, 0.0, 1.0,
-    };
-
-
-	GLuint VBO, VAO;
-
-	//Geração do identificador do VBO
-	glGenBuffers(1, &VBO);
-
-	//Faz a conexão (vincula) do buffer como um buffer de array
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-	//Envia os dados do array de floats para o buffer da OpenGl
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	//Geração do identificador do VAO (Vertex Array Object)
-	glGenVertexArrays(1, &VAO);
-
-	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
-	// e os ponteiros para os atributos 
-	glBindVertexArray(VAO);
-	
-	//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
-	// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
-	// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
-	// Tipo do dado
-	// Se está normalizado (entre zero e um)
-	// Tamanho em bytes 
-	// Deslocamento a partir do byte zero 
-	
-	//Atributo posição (x, y, z)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
-
-	//Atributo cor (r, g, b)
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
-
-
-	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
-	// atualmente vinculado - para que depois possamos desvincular com segurança
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
-	glBindVertexArray(0);
-
-	return VAO;
-}
-
-int loadSimpleOBJ(string filePATH, int &nVertices)
+int loadSimpleOBJ(string filePATH, int &nVertices, int r, int g,int b)
  {
     std::vector<glm::vec3> vertices;
-    std::vector<glm::vec2> texCoords;
-    std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> texCoords;
+	std::vector<glm::vec3> normals;
     std::vector<GLfloat> vBuffer;
-    glm::vec3 color = glm::vec3(1.0, 0.0, 0.0);
 
     std::ifstream arqEntrada(filePATH.c_str());
     if (!arqEntrada.is_open()) 
@@ -592,20 +615,20 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
 		 {
             while (ssline >> word) 
 			{
-                int vi = 0, ti = 0, ni = 0;
+				int vi = 0;
                 std::istringstream ss(word);
                 std::string index;
 
                 if (std::getline(ss, index, '/')) vi = !index.empty() ? std::stoi(index) - 1 : 0;
-                if (std::getline(ss, index, '/')) ti = !index.empty() ? std::stoi(index) - 1 : 0;
-                if (std::getline(ss, index)) ni = !index.empty() ? std::stoi(index) - 1 : 0;
+				if (std::getline(ss, index, '/')) { }
+				if (std::getline(ss, index)) { }
 
                 vBuffer.push_back(vertices[vi].x);
                 vBuffer.push_back(vertices[vi].y);
                 vBuffer.push_back(vertices[vi].z);
-                vBuffer.push_back(rand() % 256/255.0);
-                vBuffer.push_back(rand() % 256/255.0);
-                vBuffer.push_back(rand() % 256/255.0);
+                vBuffer.push_back(r);
+                vBuffer.push_back(g);
+                vBuffer.push_back(b);
             }
         }
     }
