@@ -1,6 +1,6 @@
 # TODO LIST
 
-[ ] Adicionar infos no README - Como rodar; Esturtura do projeto; Requisitos para rodar;
+[x] Adicionar infos no README - Como rodar; Esturtura do projeto; Requisitos para rodar;
 
 [x] Estruturar o projeto base;
 
