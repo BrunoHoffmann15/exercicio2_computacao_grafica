@@ -88,15 +88,16 @@ void main()
 }
 )glsl";
 
-bool axisX=false, axisY=false, axisZ=false, rotateEnabled = false, scale = false, translade = false;
-bool perspective = true; //começa com projeção perspectiva
-int active_mesh = -1; //mesh selecionado para transformação (0 ou 1)
+// Definindo variáveis globais para controle de transformações.
+bool axisX=true, axisY=false, axisZ=false, rotateEnabled = true, scale = false, translade = false;
+int active_mesh = 0; //mesh selecionado para transformação (0 ou 1)
 
 //Instanciação da Camera
-Camera camera(glm::vec3(0.0, 0.0, -3.0), glm::vec3(0.0,1.0,0.0),90.0,0.0);
+Camera camera(glm::vec3(0.0, 0.0, -5.0), glm::vec3(0.0,1.0,0.0),90.0,0.0);
 float deltaTime = 0.0;
 float lastFrame = 0.0; 
 
+// Estrutura Mesh para controle de objeto;
 struct Mesh 
 {
     GLuint VAO;
@@ -106,12 +107,12 @@ struct Mesh
 	int nVertices;
 };
 
+// Declaração das funções de transformação.
 void rotateMesh(Mesh &mesh, bool clockwise);
 
 void scaleMesh(Mesh &mesh, bool up);
 
 void transladeMesh(Mesh &mesh, bool up);
-
 
 // Função MAIN
 int main()
@@ -183,22 +184,23 @@ int main()
     
     glEnable(GL_DEPTH_TEST);
 
+	// Definição dos objetos e seus atributos.
 	std::vector<Mesh> meshes;
 
 	Mesh m1;
 
-	m1.VAO = loadSimpleOBJ("../../assets/Suzanne.obj",m1.nVertices, 1, 0, 1);
-	m1.position = glm::vec3(0.0, 0.0, 0.0);
-	m1.rotation = glm::vec3(0.0, 0.0, 0.0);
+	m1.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m1.nVertices, 1, 0, 1);
+	m1.position = glm::vec3(-0.8, 0.0, 0.0);
+	m1.rotation = glm::vec3(0.0, 180.0, 0.0);
 	m1.scale = glm::vec3(0.5, 0.5, 0.5);
 
 	meshes.push_back(m1);
 
 	Mesh m2;
 
-	m2.VAO = loadSimpleOBJ("../../assets/Suzanne.obj",m2.nVertices, 0, 1, 1);
-	m2.position = glm::vec3(1.0, 0.0, 0.0);
-	m2.rotation = glm::vec3(0.0, 0.0, 0.0);
+	m2.VAO = loadSimpleOBJ("../assets/Suzanne.obj",m2.nVertices, 0, 1, 1);
+	m2.position = glm::vec3(0.8, 0.0, 0.0);
+	m2.rotation = glm::vec3(0.0, 180.0, 0.0);
 	m2.scale = glm::vec3(0.5, 0.5, 0.5);
 
 	meshes.push_back(m2);
@@ -223,75 +225,36 @@ int main()
 		glLineWidth(10);
 		glPointSize(10);
 
-        // ----------
-         
-         
-         if (perspective)
-         {
-            projection = glm::perspective(glm::radians(45.0f),(float)WIDTH/(float)HEIGHT,0.1f,100.0f);
-            glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		// Configuração da projeção.
+		projection = glm::perspective(glm::radians(45.0f),(float)WIDTH/(float)HEIGHT,0.1f,100.0f);
+		glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-         }
-         else // Troca para projeção paralela ortográfica
-         {
-            projection = glm::ortho(-3.0, 3.0, -3.0, 3.0, 0.1, 100.0);
-            glUniformMatrix4fv(glGetUniformLocation(shaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-         }
+		// Configuração da movimentação da câmera via teclado (IKJL).
+		if(glfwGetKey(window,GLFW_KEY_I) == GLFW_PRESS) camera.processKeyboard("FORWARD",deltaTime);
+		if(glfwGetKey(window,GLFW_KEY_K) == GLFW_PRESS) camera.processKeyboard("BACKWARD",deltaTime);
+		if(glfwGetKey(window,GLFW_KEY_J) == GLFW_PRESS) camera.processKeyboard("LEFT",deltaTime);
+		if(glfwGetKey(window,GLFW_KEY_L) == GLFW_PRESS) camera.processKeyboard("RIGHT",deltaTime);
 
-		 if(glfwGetKey(window,GLFW_KEY_I) == GLFW_PRESS) camera.processKeyboard("FORWARD",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_K) == GLFW_PRESS) camera.processKeyboard("BACKWARD",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_J) == GLFW_PRESS) camera.processKeyboard("LEFT",deltaTime);
-		 if(glfwGetKey(window,GLFW_KEY_L) == GLFW_PRESS) camera.processKeyboard("RIGHT",deltaTime);
-        
-        if (glfwGetKey(window, GLFW_KEY_1)==GLFW_PRESS)
-        {
-            //Visualização de frente
-            view = glm::lookAt(glm::vec3(0,0,-3), glm::vec3(0,0,0), glm::vec3(0,1,0));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_2)==GLFW_PRESS)
-        {
-            //Visualização de costas
-            view = glm::lookAt(glm::vec3(0,0,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_3)==GLFW_PRESS)
-        {
-            //Visualização da esquerda
-            view = glm::lookAt(glm::vec3(-3,0,0), glm::vec3(0,0,0), glm::vec3(0,1,0));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_4)==GLFW_PRESS)
-        {
-            //Visualização da direita
-            view = glm::lookAt(glm::vec3(3,0,0), glm::vec3(0,0,0), glm::vec3(0,1,0));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_5)==GLFW_PRESS)
-        {
-            //Visualização de cima
-            view = glm::lookAt(glm::vec3(0,3,0), glm::vec3(0,0,0), glm::vec3(0,0,1));
-        }
-        else if (glfwGetKey(window, GLFW_KEY_6)==GLFW_PRESS)
-        {
-            //Visualização debaixo
-            view = glm::lookAt(glm::vec3(0,-3,0), glm::vec3(0,0,0), glm::vec3(0,0,1));
-        }
-
+		// Configurações das transformação dos objetos.
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			if (rotateEnabled) {
+			if (rotateEnabled) { // Caso de rotação.
 				rotateMesh(meshes[active_mesh], true);
 			}
-			else if (scale) {
+			else if (scale) { // Caso de escalar.
 				scaleMesh(meshes[active_mesh], true);
-			} else {
+			} else { // Caso de translação.
 				transladeMesh(meshes[active_mesh], true);
 			}
 		}
 
+		// Configurações das transformação dos objetos.
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			if (rotateEnabled) {
+			if (rotateEnabled) { // Caso de rotação.
 				rotateMesh(meshes[active_mesh], false);
 			}
-			else if (scale) {
+			else if (scale) { // Caso de escalar.
 				scaleMesh(meshes[active_mesh], false);
-			} else {
+			} else { // Caso de translação.
 				transladeMesh(meshes[active_mesh], false);
 			}
 		}
@@ -305,8 +268,10 @@ int main()
 		glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
 		// Chamada de Desenho - DRAWCALL
-		// Primeiro: renderizar solid
+		// Primeiro: renderizar solido
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		// Renderiza cada mesh da cena.
 		for (auto& mesh : meshes) 
 		{
 			glm::mat4 modelMesh = glm::mat4(1);
@@ -331,6 +296,8 @@ int main()
 		glUniformMatrix4fv(glGetUniformLocation(wireframeShaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glLineWidth(1.5f);
+
+		// Renderiza cada mesh da cena.
 		for (auto& mesh : meshes) 
 		{
 			glm::mat4 modelMesh = glm::mat4(1);

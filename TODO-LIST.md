@@ -4,7 +4,7 @@
 
 [x] Estruturar o projeto base;
 
-[ ] Fazer seletor do objeto (com base no número);
+[x] Fazer seletor do objeto (com base no número);
 
 [x] Fazer o processo de movimentar o objeto;
 
