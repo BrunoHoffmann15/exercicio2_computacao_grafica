@@ -379,61 +379,52 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		rotateEnabled = false;
 		translade = false;
 	}
-
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 	{
 		scale = false;
 		rotateEnabled = true;
 		translade = false;
 	}
-
 	if (key == GLFW_KEY_T && action == GLFW_PRESS)
 	{
 		scale = false;
 		rotateEnabled = false;
 		translade = true;
 	}
-
 	if (key == GLFW_KEY_X && action == GLFW_PRESS)
 	{
 		axisX = true;
 		axisY = false;
 		axisZ = false;
 	}
-
 	if (key == GLFW_KEY_Y && action == GLFW_PRESS)
 	{
 		axisX = false;
 		axisY = true;
 		axisZ = false;
 	}
-
 	if (key == GLFW_KEY_Z && action == GLFW_PRESS)
 	{
 		axisX = false;
 		axisY = false;
 		axisZ = true;
 	}
-
 	if (key == GLFW_KEY_C && action == GLFW_PRESS)
 	{
 		axisX = true;
 		axisY = true;
 		axisZ = true;
 	}
-  if ((key == GLFW_KEY_1 || key == GLFW_KEY_KP_1) && action == GLFW_PRESS)
-  {
-      active_mesh = 0;
-      scale = false;
-      rotateEnabled = false;
-      translade = false;
-  }
-  if ((key == GLFW_KEY_2 || key == GLFW_KEY_KP_2) && action == GLFW_PRESS)
-  {
-      active_mesh = 1;
-      scale = false;
-      rotateEnabled = false;
-      translade = false;
+	if ((key == GLFW_KEY_1 || key == GLFW_KEY_KP_1) && action == GLFW_PRESS)
+	{
+		active_mesh = 0;
+	}
+	if ((key == GLFW_KEY_2 || key == GLFW_KEY_KP_2) && action == GLFW_PRESS)
+	{
+		active_mesh = 1;
+	}
+	if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+		active_mesh = (active_mesh + 1) % 2;
 	}
 }
 
