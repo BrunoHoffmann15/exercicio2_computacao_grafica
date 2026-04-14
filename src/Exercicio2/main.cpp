@@ -107,7 +107,10 @@ struct Mesh
 	int nVertices;
 };
 
-// Declaração das funções de transformação.
+// Definição da função de renderização dos meshes.
+void renderMeshes(std::vector<Mesh> &meshes, GLuint shaderID);
+
+// Definição das funções de transformação.
 void applyTransform(Mesh &mesh, bool shouldGoUp);
 
 void rotateMesh(Mesh &mesh, bool clockwise);
@@ -259,24 +262,7 @@ int main()
 		// Primeiro: renderizar solido
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		// Renderiza cada mesh da cena.
-		for (auto& mesh : meshes) 
-		{
-			glm::mat4 modelMesh = glm::mat4(1);
-			
-			// Aplicar transformações do mesh
-			modelMesh = glm::translate(modelMesh, mesh.position);
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-			modelMesh = glm::scale(modelMesh, mesh.scale);
-			
-			glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, glm::value_ptr(modelMesh));
-			
-			glBindVertexArray(mesh.VAO);
-			glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
-			glBindVertexArray(0);
-		}
+		renderMeshes(meshes, shaderID); // Renderiza cada mesh da cena.
 		
 		// Segundo: renderizar wireframe por cima
 		glUseProgram(wireframeShaderID);
@@ -285,24 +271,8 @@ int main()
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glLineWidth(1.5f);
 
-		// Renderiza cada mesh da cena.
-		for (auto& mesh : meshes) 
-		{
-			glm::mat4 modelMesh = glm::mat4(1);
-			
-			// Aplicar transformações do mesh
-			modelMesh = glm::translate(modelMesh, mesh.position);
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-			modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-			modelMesh = glm::scale(modelMesh, mesh.scale);
-			
-			glUniformMatrix4fv(glGetUniformLocation(wireframeShaderID, "model"), 1, GL_FALSE, glm::value_ptr(modelMesh));
-			
-			glBindVertexArray(mesh.VAO);
-			glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
-			glBindVertexArray(0);
-		}
+		renderMeshes(meshes, wireframeShaderID); // Renderiza cada mesh da cena.
+
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glUseProgram(shaderID);
 
@@ -334,6 +304,7 @@ void applyTransform(Mesh &mesh, bool shouldGoUp)
 	}
 }
 
+// Translada o mesh no sentido positivo ou negativo do eixo selecionado (X, Y ou Z)
 void transladeMesh(Mesh &mesh, bool up)
 {
 	float delta = 0.01f * (up ? 1 : -1);
@@ -359,6 +330,7 @@ void rotateMesh(Mesh &mesh, bool clockwise)
 		mesh.rotation.z += delta;
 }
 
+// Escala o mesh para mais próximo ou mais distante do ponto de origem, dependendo do valor de "up"
 void scaleMesh(Mesh &mesh, bool up)
 {
 	float delta = up ? 0.01f : -0.01f;
@@ -369,6 +341,28 @@ void scaleMesh(Mesh &mesh, bool up)
 		mesh.scale.y += delta;
 	if (axisZ)
 		mesh.scale.z += delta;
+}
+
+// Renderiza os meshes com base no shader e nas transformações aplicadas a ele.
+void renderMeshes(std::vector<Mesh> &meshes, GLuint shaderID)
+{
+	for (auto& mesh : meshes) 
+	{
+		glm::mat4 modelMesh = glm::mat4(1);
+		
+		// Aplicar transformações do mesh
+		modelMesh = glm::translate(modelMesh, mesh.position);
+		modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		modelMesh = glm::rotate(modelMesh, glm::radians(mesh.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelMesh = glm::scale(modelMesh, mesh.scale);
+		
+		glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, glm::value_ptr(modelMesh));
+		
+		glBindVertexArray(mesh.VAO);
+		glDrawArrays(GL_TRIANGLES, 0, mesh.nVertices);
+		glBindVertexArray(0);
+	}
 }
 
 // Função de callback de teclado - só pode ter uma instância (deve ser estática se
