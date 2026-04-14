@@ -108,6 +108,8 @@ struct Mesh
 };
 
 // Declaração das funções de transformação.
+void applyTransform(Mesh &mesh, bool shouldGoUp);
+
 void rotateMesh(Mesh &mesh, bool clockwise);
 
 void scaleMesh(Mesh &mesh, bool up);
@@ -237,26 +239,12 @@ int main()
 
 		// Configurações das transformação dos objetos.
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			if (rotateEnabled) { // Caso de rotação.
-				rotateMesh(meshes[active_mesh], true);
-			}
-			else if (scale) { // Caso de escalar.
-				scaleMesh(meshes[active_mesh], true);
-			} else { // Caso de translação.
-				transladeMesh(meshes[active_mesh], true);
-			}
+			applyTransform(meshes[active_mesh], true);
 		}
 
 		// Configurações das transformação dos objetos.
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			if (rotateEnabled) { // Caso de rotação.
-				rotateMesh(meshes[active_mesh], false);
-			}
-			else if (scale) { // Caso de escalar.
-				scaleMesh(meshes[active_mesh], false);
-			} else { // Caso de translação.
-				transladeMesh(meshes[active_mesh], false);
-			}
+			applyTransform(meshes[active_mesh], false);
 		}
         
         glUniformMatrix4fv(glGetUniformLocation(shaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -332,6 +320,18 @@ int main()
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
+}
+
+void applyTransform(Mesh &mesh, bool shouldGoUp)
+{
+	if (rotateEnabled) { // Caso de rotação.
+		rotateMesh(mesh, shouldGoUp);
+	}
+	else if (scale) { // Caso de escalar.
+		scaleMesh(mesh, shouldGoUp);
+	} else { // Caso de translação.
+		transladeMesh(mesh, shouldGoUp);
+	}
 }
 
 void transladeMesh(Mesh &mesh, bool up)
