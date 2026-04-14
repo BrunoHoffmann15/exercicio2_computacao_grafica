@@ -1,10 +1,10 @@
-Disciplina: Processamento Gráfico: Computação Gráfica e Aplicações
+Disciplina: Processamento Gráfico: Computação Gráfica e Aplicações.
 
-Aluno: Bel Cogo e Bruno da Siqueira Hoffmann
+Alunos: Bel Cogo e Bruno da Siqueira Hoffmann.
 
 # Exercício 2 - Selecionando e aplicando transformações em objetos 3D
 
-O objetivo do exercício era fazer a leitura de mais de um objeto em cena, e consequentemente permitir que o usuário aplicasse transformações nos objetos.
+O objetivo do exercício era fazer a leitura de um objeto utilizando um arquivo `.obj`, renderizar mais de um objeto em cena com base nas informações do arquivo, e permitir que o usuário aplicasse transformações nos objetos.
 
 ## Como Executar o Projeto
 
